@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -208,45 +208,38 @@ function Logo() {
 
 const ROTATING = ["internship", "research lab", "film gig", "PhD spot", "med school seat", "fellowship", "first job"];
 
-/** Headline word that scrolls through goals like a slot machine: concrete, but fits every Trojan. */
+// A long reel of repeated words so every spin can travel several slots before landing.
+const REEL = Array.from({ length: 42 }, (_, k) => ROTATING[k % ROTATING.length]);
+const STEP = 3; // slots per spin (3 and 7 are coprime, so every goal gets its turn)
+
+/** Slot-machine headline word: spins through several goals, then eases to a stop. */
 function RotatingWord() {
-  const words = [...ROTATING, ROTATING[0]]; // repeat the first word so the loop is seamless
-  const [i, setI] = useState(0);
+  const [pos, setPos] = useState(0);
   const [animate, setAnimate] = useState(true);
-  const [width, setWidth] = useState<number>();
-  const refs = useRef<(HTMLSpanElement | null)[]>([]);
 
   useEffect(() => {
-    const id = setInterval(() => { setAnimate(true); setI((x) => x + 1); }, 2300);
+    const id = setInterval(() => { setAnimate(true); setPos((p) => p + STEP); }, 2800);
     return () => clearInterval(id);
   }, []);
+  // Near the end of the reel, silently jump back to the same word earlier in the reel.
   useEffect(() => {
-    if (i !== ROTATING.length) return;
-    const t = setTimeout(() => { setAnimate(false); setI(0); }, 700); // snap back to the real first word
+    if (pos < REEL.length - STEP * 2) return;
+    const t = setTimeout(() => { setAnimate(false); setPos(pos % ROTATING.length); }, 1150);
     return () => clearTimeout(t);
-  }, [i]);
-  useLayoutEffect(() => {
-    const el = refs.current[i];
-    if (el) setWidth(el.offsetWidth);
-  }, [i]);
+  }, [pos]);
 
-  const H = 1.14; // em: one row of the scroller
+  const H = 1.5; // em: tall slot so descenders sit clear of the fade and neighbours never peek in
+  const fade = "linear-gradient(to bottom, transparent 0%, #000 13%, #000 87%, transparent 100%)";
   return (
     <>
-      <span className="sr-only">{ROTATING[i % ROTATING.length]}</span>
-      <span
-        aria-hidden
-        className="relative inline-block overflow-hidden text-cardinal"
-        style={{ height: `${H}em`, width, verticalAlign: "bottom", transition: animate ? "width 550ms cubic-bezier(.22,1,.36,1)" : "none" }}
-      >
+      <span className="sr-only">{REEL[pos]}</span>
+      <span aria-hidden className="relative block overflow-hidden text-cardinal" style={{ height: `${H}em`, margin: "-0.22em 0", maskImage: fade, WebkitMaskImage: fade }}>
         <span
-          className="flex flex-col items-start"
-          style={{ transform: `translateY(-${i * H}em)`, transition: animate ? "transform 700ms cubic-bezier(.65,0,.35,1)" : "none" }}
+          className="flex flex-col items-center"
+          style={{ transform: `translateY(-${pos * H}em)`, transition: animate ? "transform 1100ms cubic-bezier(.16,1,.3,1)" : "none", willChange: "transform" }}
         >
-          {words.map((w, k) => (
-            <span key={k} ref={(el) => { refs.current[k] = el; }} className="block whitespace-nowrap" style={{ height: `${H}em`, lineHeight: `${H}em` }}>
-              {w}
-            </span>
+          {REEL.map((w, k) => (
+            <span key={k} className="block whitespace-nowrap" style={{ height: `${H}em`, lineHeight: `${H}em` }}>{w}</span>
           ))}
         </span>
       </span>
@@ -283,8 +276,10 @@ function Landing({ onStart, onDemo, onCancel }: { onStart: () => void; onDemo: (
         <span className="rise inline-flex h-8 items-center gap-1.5 rounded-full bg-cardinal px-3.5 text-[13px] font-semibold text-gold-bright shadow-[0_6px_18px_-8px_rgba(153,0,0,.7)]">
           Free AI career planner for USC students ✌️
         </span>
-        <h1 className="rise mt-6 max-w-3xl text-[44px] font-semibold leading-[1.04] tracking-[-0.04em] sm:text-[68px]" style={{ ["--i" as string]: 1 }}>
-          Land the <RotatingWord /> you want.
+        <h1 className="rise mt-6 w-full max-w-4xl text-[40px] font-semibold leading-[1.02] tracking-[-0.04em] sm:text-[66px]" style={{ ["--i" as string]: 1 }}>
+          <span className="block">Land the</span>
+          <RotatingWord />
+          <span className="block">you want.</span>
         </h1>
         <p className="rise mt-5 max-w-2xl text-[17px] leading-relaxed text-muted sm:text-[19px]" style={{ ["--i" as string]: 2 }}>
           Whatever you&apos;re going for: drop your resume and get a week-by-week plan, openings you qualify for, and advice from Trojans who got there.
