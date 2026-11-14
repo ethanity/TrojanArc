@@ -113,3 +113,33 @@ export const USC_RESOURCES: Resource[] = [
 export function resourcesPrompt(): string {
   return USC_RESOURCES.map((r) => `- ${r.name}: ${r.what}`).join("\n");
 }
+
+// Links verified to load (Nov 2026). Resources without a verified page get no link.
+export const RESOURCE_URLS: Record<string, string> = {
+  "USC Career Center": "https://careers.usc.edu/",
+  "Viterbi Career Connections": "https://viterbicareers.usc.edu/",
+  "CURVE (Center for Undergraduate Research in Viterbi Engineering)": "https://viterbiundergrad.usc.edu/research/curve/",
+  "Kortschak Center for Learning and Creativity": "https://kortschakcenter.usc.edu/",
+  "Viterbi Academic Advising": "https://viterbiundergrad.usc.edu/",
+  "Lloyd Greif Center for Entrepreneurial Studies": "https://www.marshall.usc.edu/departments/lloyd-greif-center-entrepreneurial-studies",
+  "USC Counseling and Mental Health": "https://studenthealth.usc.edu/counseling/",
+  "CSCI 445L Introduction to Robotics": "https://classes.usc.edu/",
+  "CSCI 467 Introduction to Machine Learning": "https://classes.usc.edu/",
+  "USC School of Cinematic Arts": "https://cinema.usc.edu/",
+  "USC Thornton School of Music": "https://music.usc.edu/",
+  "Marshall School of Business": "https://www.marshall.usc.edu/",
+  "USC Graduate School": "https://graduateschool.usc.edu/",
+  "Office of International Services (OIS)": "https://ois.usc.edu/",
+  "USC Libraries": "https://libraries.usc.edu/",
+  HackSC: "https://hacksc.com/",
+};
+
+/** Link for a resource name, or a course code (e.g. "CSCI 467") -> USC Schedule of Classes. */
+export function resourceUrl(name: string): string | undefined {
+  if (!name) return undefined;
+  if (RESOURCE_URLS[name]) return RESOURCE_URLS[name];
+  const hit = Object.keys(RESOURCE_URLS).find((k) => k.toLowerCase().startsWith(name.toLowerCase()) || name.toLowerCase().startsWith(k.toLowerCase()));
+  if (hit) return RESOURCE_URLS[hit];
+  if (/^[A-Z]{2,5} ?\d{3}[A-Z]?\b/.test(name)) return "https://classes.usc.edu/";
+  return undefined;
+}

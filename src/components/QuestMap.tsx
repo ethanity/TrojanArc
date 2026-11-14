@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ArrowSquareOut,
   ArrowsClockwise,
   Books,
   Briefcase,
@@ -18,6 +19,7 @@ import {
   Warning,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
+import { resourceUrl } from "@/lib/data/resources";
 import type { Quest, Requirement, Stat } from "@/lib/types";
 import { AiWorking, Card, Chip, ErrorNote, ModeNote, PageHeader, SectionTitle, Skeleton } from "./ui";
 import { LevelRing } from "./viz";
@@ -88,7 +90,11 @@ export function QuestCard({ q, compact = false, index = 0 }: { q: Quest; compact
           <div className="mt-3 flex flex-wrap items-center gap-1.5">
             <Chip tone={STAT_TONE[q.stat]} icon={<Icon size={13} weight="bold" />}>{q.stat}</Chip>
             <Chip icon={<Clock size={13} />}>{q.effort}</Chip>
-            {q.resource && <Chip tone="gold">{q.resource}</Chip>}
+            {q.resource && (resourceUrl(q.resource) ? (
+              <a href={resourceUrl(q.resource)} target="_blank" rel="noreferrer" className="transition-opacity hover:opacity-80" title={`Open ${q.resource}`}>
+                <Chip tone="gold" icon={<ArrowSquareOut size={12} weight="bold" />}>{q.resource}</Chip>
+              </a>
+            ) : <Chip tone="gold">{q.resource}</Chip>)}
             {!active ? (
               <button className="btn btn-quiet btn-sm ml-auto !min-h-7 !px-2 text-[12.5px]" onClick={() => setQuestStatus(q.id, "active")}>
                 <PushPin size={14} /> Pin to today
