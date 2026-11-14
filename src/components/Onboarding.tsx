@@ -315,7 +315,7 @@ function Landing({ onStart, onDemo, onCancel }: { onStart: () => void; onDemo: (
               <path d="M8 62 C 80 62, 120 12, 252 10" fill="none" stroke="#efe8e1" strokeWidth="5" strokeLinecap="round" />
               <path d="M8 62 C 80 62, 120 12, 252 10" fill="none" stroke="url(#lp)" strokeWidth="5" strokeLinecap="round" pathLength={1} strokeDasharray="0.55 1" />
               <defs><linearGradient id="lp"><stop offset="0" stopColor="#990000" /><stop offset="1" stopColor="#ffcc00" /></linearGradient></defs>
-              <circle cx="8" cy="62" r="5" fill="#990000" /><circle cx="120" cy="38" r="6" fill="#ffcc00" stroke="#fff" strokeWidth="2" /><circle cx="252" cy="10" r="5" fill="#e8dfd6" />
+              <circle cx="8" cy="62" r="5" fill="#990000" /><circle cx="140.6" cy="25.9" r="6" fill="#ffcc00" stroke="#fff" strokeWidth="2" /><circle cx="252" cy="10" r="5" fill="#e8dfd6" />
             </svg>
             <ul className="mt-3 space-y-2 text-[13.5px]">
               {[["Film a robot demo", true], ["Email a research lab", true], ["Apply to 25 roles", false]].map(([t, d]) => (
