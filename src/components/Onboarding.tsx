@@ -188,7 +188,7 @@ function GradPicker({ value, onChange }: { value: string; onChange: (v: string) 
   return (
     <div>
       <span className="text-[12px] font-medium text-faint">Graduating</span>
-      <div className="mt-1 grid grid-cols-[1.2fr_1fr] gap-2">
+      <div className="mt-1 grid grid-cols-[1.45fr_1fr] gap-2">
         {[
           { label: "Term", v: term, opts: GRAD_TERMS, on: (x: string) => set(x, year || String(THIS_YEAR + 2)) },
           { label: "Year", v: year, opts: GRAD_YEARS, on: (x: string) => set(term || "May", x) },
@@ -976,7 +976,7 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
 
                 <div className="space-y-5">
                   <InlineField label="Name" big value={basics.name} onChange={(v) => setBasics((b) => ({ ...b, name: v }))} placeholder="Your name" />
-                  <div className="grid gap-5 sm:grid-cols-[1.7fr_1fr]">
+                  <div className="grid gap-5 sm:grid-cols-[1.25fr_1fr]">
                     <InlineField label="Major" value={basics.major} onChange={(v) => setBasics((b) => ({ ...b, major: v }))} placeholder="Start typing your major" list="usc-majors" />
                     <GradPicker value={basics.gradTerm} onChange={(v) => setBasics((b) => ({ ...b, gradTerm: v }))} />
                   </div>
