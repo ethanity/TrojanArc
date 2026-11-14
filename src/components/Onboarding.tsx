@@ -164,6 +164,49 @@ function ScanPill({ scan, files }: { scan: Scan; files: number }) {
   );
 }
 
+/* ---------------- Graduation picker ---------------- */
+
+const GRAD_TERMS = ["May", "August", "December"]; // when USC confers degrees
+const THIS_YEAR = new Date().getFullYear();
+const GRAD_YEARS = Array.from({ length: 8 }, (_, i) => String(THIS_YEAR + i));
+
+/** Turn whatever a document said ("Spring '29", "Dec 2028", "Class of 2029") into "May 2029". */
+export function normalizeGrad(raw: string): string {
+  const s = (raw ?? "").toLowerCase();
+  const four = s.match(/20\d{2}/)?.[0];
+  const two = s.match(/['\u2019](\d{2})\b/)?.[1];
+  const year = four ?? (two ? `20${two}` : "");
+  if (!year) return "";
+  const term = /dec|fall|winter/.test(s) ? "December" : /aug|summer/.test(s) ? "August" : "May";
+  return `${term} ${year}`;
+}
+
+function GradPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [term = "", year = ""] = value ? value.split(" ") : [];
+  const set = (t: string, y: string) => onChange(t && y ? `${t} ${y}` : t || y ? `${t}${t && y ? " " : ""}${y}` : "");
+  const sel = "h-10 w-full appearance-none rounded-xl border border-hairline-2 bg-surface pl-3 pr-8 text-[15px] font-medium outline-none transition-colors hover:border-cardinal/40 focus:border-cardinal/60";
+  return (
+    <div>
+      <span className="text-[12px] font-medium text-faint">Graduating</span>
+      <div className="mt-1 grid grid-cols-[1.2fr_1fr] gap-2">
+        {[
+          { label: "Term", v: term, opts: GRAD_TERMS, on: (x: string) => set(x, year || String(THIS_YEAR + 2)) },
+          { label: "Year", v: year, opts: GRAD_YEARS, on: (x: string) => set(term || "May", x) },
+        ].map((d) => (
+          <label key={d.label} className="relative block">
+            <span className="sr-only">Graduation {d.label.toLowerCase()}</span>
+            <select className={`${sel} ${d.v ? "" : "text-faint"}`} value={d.v} onChange={(e) => d.on(e.target.value)}>
+              <option value="" disabled>{d.label}</option>
+              {d.opts.map((o) => <option key={o} value={o}>{o}</option>)}
+            </select>
+            <CaretDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-faint" />
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function InlineField({ label, value, onChange, placeholder, list, big = false }: { label: string; value: string; onChange: (v: string) => void; placeholder: string; list?: string; big?: boolean }) {
   return (
     <label className="group block">
@@ -453,7 +496,7 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
     if (scan.state !== "done" || !scan.result) return;
     const p = scan.result.profile;
     // eslint-disable-next-line react-hooks/set-state-in-effect -- merge async scan result into the form
-    setBasics((b) => ({ name: b.name || p.name, major: b.major || p.major, year: b.year || p.year, gradTerm: b.gradTerm || p.gradTerm }));
+    setBasics((b) => ({ name: b.name || p.name, major: b.major || p.major, year: b.year || p.year, gradTerm: b.gradTerm || normalizeGrad(p.gradTerm) }));
   }, [scan]);
 
   const sourceKey = (list: File[], li: LinkedInSummary | null) => `${list.map((f) => f.name + f.size).join()}|${github.trim()}|${website.trim()}|${li?.connectionsTotal ?? ""}`;
@@ -569,7 +612,7 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
       major,
       school: base.school || schoolFor(major),
       year: basics.year || base.year,
-      gradTerm: basics.gradTerm || base.gradTerm,
+      gradTerm: basics.gradTerm || normalizeGrad(base.gradTerm) || base.gradTerm,
       goal: goal.trim(),
       goalTags: uniq(tags, tagsFromText(goal), goal === base.goal ? base.goalTags : [], level === "Master's" ? ["masters"] : level === "PhD" ? ["phd"] : []),
       timeline: timeline || base.timeline,
@@ -935,7 +978,7 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
                   <InlineField label="Name" big value={basics.name} onChange={(v) => setBasics((b) => ({ ...b, name: v }))} placeholder="Your name" />
                   <div className="grid gap-5 sm:grid-cols-[1.7fr_1fr]">
                     <InlineField label="Major" value={basics.major} onChange={(v) => setBasics((b) => ({ ...b, major: v }))} placeholder="Start typing your major" list="usc-majors" />
-                    <InlineField label="Graduating" value={basics.gradTerm} onChange={(v) => setBasics((b) => ({ ...b, gradTerm: v }))} placeholder="May 2029" />
+                    <GradPicker value={basics.gradTerm} onChange={(v) => setBasics((b) => ({ ...b, gradTerm: v }))} />
                   </div>
                   <datalist id="usc-majors">{MAJORS.map((m) => <option key={m} value={m} />)}</datalist>
                   <div>
