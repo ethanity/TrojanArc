@@ -11,6 +11,7 @@ import { STORIES } from "@/lib/data/stories";
 import { rankStories } from "@/lib/similarity";
 import type { Quest } from "@/lib/types";
 import { Avatar, Chip } from "./ui";
+import ConfirmDone from "./ConfirmDone";
 
 const daysUntil = (s: string, from: Date) => {
   if (!s) return null;
@@ -22,13 +23,16 @@ const daysUntil = (s: string, from: Date) => {
 
 function QuestRow({ q }: { q: Quest }) {
   const { setQuestStatus } = useStore();
+  const [confirming, setConfirming] = useState(false);
   const done = q.status === "done";
   return (
     <li className="group flex items-center gap-3.5 py-3.5">
+      {confirming && <ConfirmDone quest={q} onCancel={() => setConfirming(false)} onConfirm={() => { setConfirming(false); setQuestStatus(q.id, "done"); }} />}
       <button
-        onClick={() => setQuestStatus(q.id, done ? "open" : "done")}
-        aria-label={done ? `Mark "${q.title}" not done` : `Complete "${q.title}"`}
-        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition-all duration-200 ${done ? "check-pop border-good bg-good text-white" : "border-hairline-2 text-transparent hover:border-good hover:text-good/60"}`}
+        onClick={() => !done && setConfirming(true)}
+        disabled={done}
+        aria-label={done ? `"${q.title}" completed` : `Complete "${q.title}"`}
+        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 transition-all duration-200 ${done ? "check-pop cursor-default border-good bg-good text-white" : "border-hairline-2 text-transparent hover:border-good hover:text-good/60"}`}
       >
         <Check size={13} weight="bold" />
       </button>
@@ -43,6 +47,7 @@ export default function Today({ go }: { go: (tab: string) => void }) {
   const { profile, quests, wins, logWin, radar, xp, setQuestStatus } = useStore();
   const cal = useCalendar();
   const [win, setWin] = useState("");
+  const [confirmNext, setConfirmNext] = useState(false);
   const lv = levelFromXp(xp);
   const first = profile?.name.split(" ")[0] || "Trojan";
 
@@ -106,14 +111,19 @@ export default function Today({ go }: { go: (tab: string) => void }) {
               <span><span className="font-semibold">Start here: </span>{next.firstStep}</span>
             </p>
             <div className="mt-5 flex flex-wrap items-center gap-2">
-              <button className="btn btn-primary" onClick={() => setQuestStatus(next.id, "done")}>
+              <button className="btn btn-primary" onClick={() => setConfirmNext(true)}>
                 <Check size={16} weight="bold" /> Mark done
               </button>
-              {next.status !== "active" && (
+              {next.status !== "active" ? (
                 <button className="btn btn-quiet" onClick={() => setQuestStatus(next.id, "active")}>
                   <PushPin size={15} /> Pin
                 </button>
+              ) : (
+                <button className="btn btn-quiet text-gold" onClick={() => setQuestStatus(next.id, "open")} title="Unpin from today">
+                  <PushPin size={15} weight="fill" /> Unpin
+                </button>
               )}
+              {confirmNext && <ConfirmDone quest={next} onCancel={() => setConfirmNext(false)} onConfirm={() => { setConfirmNext(false); setQuestStatus(next.id, "done"); }} />}
               <span className="ml-auto flex items-center gap-3 text-[13px] text-faint">
                 <span className="flex items-center gap-1"><Clock size={14} />{next.effort}</span>
                 {next.resource && (resourceUrl(next.resource) ? (

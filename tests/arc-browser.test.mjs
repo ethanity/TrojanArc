@@ -148,6 +148,7 @@ test("demo onboarding, navigation, advice, and persistent progress", { timeout: 
     await nav.getByRole("button", { name: "Today", exact: true }).click();
     const initialXp = await page.evaluate(() => JSON.parse(localStorage.getItem("trojan-arc:v1")).xp);
     await page.getByRole("button", { name: "Mark done", exact: true }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "Yes, I did it", exact: true }).click();
     await page.waitForFunction((xp) => JSON.parse(localStorage.getItem("trojan-arc:v1")).xp > xp, initialXp);
     const before = await page.evaluate(() => JSON.parse(localStorage.getItem("trojan-arc:v1")));
     await page.reload();

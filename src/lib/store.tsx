@@ -97,9 +97,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         }),
       setQuestStatus: (id, status) => {
         const q = state.quests.find((x) => x.id === id);
-        setState((s) => ({ ...s, quests: s.quests.map((x) => (x.id === id ? { ...x, status } : x)) }));
-        if (q && status === "done" && q.status !== "done") addXp(q.xp, "Quest complete", q.title);
-        if (q && status === "active" && q.status === "open") addXp(5, "Quest started", q.title);
+        // Done is final: the XP is locked in, so a finished quest can't be reopened (no XP farming).
+        if (!q || q.status === "done" || q.status === status) return;
+        const firstPin = status === "active" && !q.pinXp;
+        setState((s) => ({
+          ...s,
+          quests: s.quests.map((x) => (x.id === id ? { ...x, status, pinXp: x.pinXp || firstPin } : x)),
+        }));
+        if (status === "done") addXp(q.xp, "Quest complete", q.title);
+        else if (firstPin) addXp(5, "Quest pinned", q.title);
       },
       logWin: (text) => {
         setState((s) => ({ ...s, wins: [{ id: `w-${Date.now()}`, text, date: new Date().toISOString(), xp: 50 }, ...s.wins] }));

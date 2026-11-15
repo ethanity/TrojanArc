@@ -23,6 +23,7 @@ import { resourceUrl } from "@/lib/data/resources";
 import type { Quest, Requirement, Stat } from "@/lib/types";
 import { AiWorking, Card, Chip, ErrorNote, ModeNote, PageHeader, SectionTitle, Skeleton } from "./ui";
 import { LevelRing } from "./viz";
+import ConfirmDone from "./ConfirmDone";
 import { JourneyArc, SkillWeb } from "./viz2";
 
 const STAT_ICON: Record<Stat, typeof Books> = { academics: Books, career: Briefcase, skills: Code, network: Handshake };
@@ -59,18 +60,22 @@ export function useRoadmapGen() {
 
 export function QuestCard({ q, compact = false, index = 0 }: { q: Quest; compact?: boolean; index?: number }) {
   const { setQuestStatus } = useStore();
+  const [confirming, setConfirming] = useState(false);
   const done = q.status === "done";
   const active = q.status === "active";
   const Icon = STAT_ICON[q.stat] ?? Code;
   return (
+    <>
+    {confirming && <ConfirmDone quest={q} onCancel={() => setConfirming(false)} onConfirm={() => { setConfirming(false); setQuestStatus(q.id, "done"); }} />}
     <div
       className={`rise tile group relative flex gap-3.5 p-4 ${done ? "!bg-good/[0.04]" : active ? "!border-gold/40 !bg-gold/[0.04]" : "tile-hover"}`}
       style={{ ["--i" as string]: index }}
     >
       <button
-        onClick={() => setQuestStatus(q.id, done ? "open" : "done")}
-        aria-label={done ? `Mark "${q.title}" not done` : `Complete "${q.title}"`}
-        className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 transition-all duration-200 ${done ? "check-pop border-good bg-good text-white" : "border-hairline-2 text-transparent hover:border-good hover:text-good/70"}`}
+        onClick={() => !done && setConfirming(true)}
+        disabled={done}
+        aria-label={done ? `"${q.title}" completed` : `Complete "${q.title}"`}
+        className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 transition-all duration-200 ${done ? "check-pop cursor-default border-good bg-good text-white" : "border-hairline-2 text-transparent hover:border-good hover:text-good/70"}`}
       >
         <Check size={15} weight="bold" />
       </button>
@@ -100,12 +105,15 @@ export function QuestCard({ q, compact = false, index = 0 }: { q: Quest; compact
                 <PushPin size={14} /> Pin to today
               </button>
             ) : (
-              <span className="ml-auto flex items-center gap-1 text-[12.5px] text-gold"><PushPin size={14} weight="fill" /> Pinned</span>
+              <button className="btn btn-quiet btn-sm ml-auto !min-h-7 !px-2 text-[12.5px] text-gold" onClick={() => setQuestStatus(q.id, "open")} title="Unpin from today">
+                <PushPin size={14} weight="fill" /> Pinned · Unpin
+              </button>
             )}
           </div>
         )}
       </div>
     </div>
+    </>
   );
 }
 

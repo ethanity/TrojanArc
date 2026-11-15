@@ -66,6 +66,8 @@ export interface Quest {
   effort: string;
   phase: string;
   status: "open" | "active" | "done";
+  /** The one-time +5 XP for pinning was already given (so unpin/re-pin can't farm it). */
+  pinXp?: boolean;
 }
 
 export interface Requirement {
