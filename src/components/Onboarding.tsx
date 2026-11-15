@@ -166,7 +166,11 @@ function ScanPill({ scan, files }: { scan: Scan; files: number }) {
 
 /* ---------------- Graduation picker ---------------- */
 
-const GRAD_TERMS = ["May", "August", "December"]; // when USC confers degrees
+const GRAD_TERMS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTH_PATTERNS = [
+  /\bjan(uary)?\b/, /\bfeb(ruary)?\b/, /\bmar(ch)?\b/, /\bapr(il)?\b/, /\bmay\b/, /\bjune?\b/,
+  /\bjuly?\b/, /\baug(ust)?\b/, /\bsep(t|tember)?\b/, /\boct(ober)?\b/, /\bnov(ember)?\b/, /\bdec(ember)?\b/,
+];
 const THIS_YEAR = new Date().getFullYear();
 const GRAD_YEARS = Array.from({ length: 8 }, (_, i) => String(THIS_YEAR + i));
 
@@ -177,7 +181,9 @@ export function normalizeGrad(raw: string): string {
   const two = s.match(/['\u2019](\d{2})\b/)?.[1];
   const year = four ?? (two ? `20${two}` : "");
   if (!year) return "";
-  const term = /dec|fall|winter/.test(s) ? "December" : /aug|summer/.test(s) ? "August" : "May";
+  // Whole month names or standard abbreviations only, so "Junior" isn't read as June.
+  const month = GRAD_TERMS.find((m, k) => MONTH_PATTERNS[k].test(s));
+  const term = month ?? (/fall|winter/.test(s) ? "December" : /summer/.test(s) ? "August" : "May");
   return `${term} ${year}`;
 }
 
