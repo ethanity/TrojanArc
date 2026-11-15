@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Trojan Arc"
+description = "A personal success and network hub for USC students, with personalized quest maps, weekly planning, opportunities, and advice."
+version = "1.0.0"
+id = "artifacts/trojan-arc"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23307
+
+[services.development]
+run = "pnpm --filter @workspace/trojan-arc run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/trojan-arc", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/trojan-arc/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23307"
+BASE_PATH = "/"

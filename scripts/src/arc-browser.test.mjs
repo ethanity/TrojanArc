@@ -1,0 +1,71 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { globSync, mkdirSync } from "node:fs";
+import { chromium } from "@playwright/test";
+
+const base = process.env.ARC_TEST_URL ?? "http://localhost:80";
+const output = "generated-artifacts/arc-tests";
+
+test("demo onboarding, navigation, advice, and persistent progress", { timeout: 120000 }, async () => {
+  mkdirSync(output, { recursive: true });
+  const nixChrome = globSync("/nix/store/*playwright-browsers*/chromium-*/chrome-linux/chrome")[0];
+  const browser = await chromium.launch({
+    ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || nixChrome
+      ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE || nixChrome } : {}),
+    args: ["--no-sandbox"],
+  });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    const errors = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.goto(base);
+    await page.getByRole("button", { name: "Try the demo", exact: true }).first().click();
+    const start = page.getByRole("button", { name: "Start my arc" });
+    await start.waitFor({ state: "visible" });
+    await page.waitForFunction(() => {
+      const input = document.querySelector('input[value="Alex Chen"]');
+      return input || [...document.querySelectorAll("input")].some((el) => el.value.length > 0);
+    });
+    await start.click();
+    const nav = page.getByRole("navigation", { name: "Main", exact: true }).filter({ visible: true });
+    await nav.getByRole("button", { name: "Quest map", exact: true }).waitFor();
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("trojan-arc:v1") ?? "{}").quests?.length > 0);
+    await page.screenshot({ path: `${output}/quest-map.jpg`, fullPage: true });
+    for (const tab of ["Today", "Quest map", "Week", "Radar", "Network", "Character"]) {
+      await nav.getByRole("button", { name: tab, exact: true }).click();
+      await page.waitForTimeout(150);
+      assert.ok(await page.locator("#main").innerText(), `${tab} should render content`);
+    }
+    await nav.getByRole("button", { name: "Network", exact: true }).click();
+    await page.getByPlaceholder("Ask the Trojan network anything…").fill("How should I prepare for internships?");
+    const adviceResponse = page.waitForResponse((response) => response.url().endsWith("/api/advice") && response.status() === 200);
+    await page.getByRole("button", { name: "Ask", exact: true }).click();
+    const advice = await (await adviceResponse).json();
+    await page.getByText(advice.advice.verdict, { exact: true }).waitFor();
+    await nav.getByRole("button", { name: "Today", exact: true }).click();
+    const initialXp = await page.evaluate(() => JSON.parse(localStorage.getItem("trojan-arc:v1")).xp);
+    await page.getByRole("button", { name: "Mark done", exact: true }).click();
+    await page.waitForFunction((xp) => JSON.parse(localStorage.getItem("trojan-arc:v1")).xp > xp, initialXp);
+    const before = await page.evaluate(() => JSON.parse(localStorage.getItem("trojan-arc:v1")));
+    await page.reload();
+    await nav.getByRole("button", { name: "Character", exact: true }).waitFor();
+    const after = await page.evaluate(() => JSON.parse(localStorage.getItem("trojan-arc:v1")));
+    assert.equal(after.profile.name, before.profile.name);
+    assert.equal(after.quests.length, before.quests.length);
+    assert.equal(after.xp, before.xp);
+    assert.ok(after.quests.some((quest) => quest.status === "done"));
+    await page.waitForTimeout(1200);
+    await page.screenshot({ path: `${output}/desktop.jpg`, fullPage: true });
+    await page.setViewportSize({ width: 390, height: 844 });
+    const mobileNav = page.getByRole("navigation", { name: "Main", exact: true }).filter({ visible: true });
+    await mobileNav.getByRole("button", { name: "Week", exact: true }).click();
+    await page.getByRole("button", { name: "Use a sample week", exact: true }).click();
+    await page.waitForTimeout(1000);
+    assert.ok(await page.locator("#main").innerText());
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+    await page.screenshot({ path: `${output}/mobile.jpg`, fullPage: true });
+    assert.deepEqual(errors, [], "No browser runtime errors");
+  } finally {
+    await browser.close();
+  }
+});

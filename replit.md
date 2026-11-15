@@ -1,45 +1,37 @@
-# [Project name]
+# Trojan Arc
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A personal college-success and network hub for USC students, ported from the imported Vercel app without redesigning it.
 
-## Run & Operate
+## Run and verify
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Use **Run** or the managed workflows `artifacts/trojan-arc: web` and `artifacts/api-server: API Server`.
+- Web frontend: `artifacts/trojan-arc`, served at `/`.
+- Express backend: `artifacts/api-server`, served at `/api`.
+- `pnpm --filter @workspace/scripts test:arc` checks the running frontend and all six migrated API routes through the shared proxy.
+- `pnpm --filter @workspace/scripts test:arc:browser` exercises demo onboarding, all six tabs, advice, quest completion and persisted XP, and a mobile sample calendar. Uses Playwright's installed Chromium, or `PLAYWRIGHT_CHROMIUM_EXECUTABLE`. Screenshots go to the ignored `generated-artifacts/arc-tests/` directory.
+- `pnpm --filter @workspace/scripts test:arc:security` checks public-site address filtering, DNS answers, redirected destinations, and streamed download limits.
+- `pnpm --filter @workspace/trojan-arc typecheck` and `pnpm --filter @workspace/api-server typecheck` check the migrated packages.
+- `pnpm --filter @workspace/api-spec codegen` updates generated API clients.
 
-## Stack
+## Configuration
 
-- pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- `ANTHROPIC_API_KEY` (server secret, optional): enables the original Claude AI integration. Without it the original clearly labeled demo responses remain available.
+- `DEMO_MODE=1` (optional): forces demo AI behavior.
+- `VITE_GOOGLE_CLIENT_ID` (public build-time setting, optional): the original Google Calendar browser OAuth client, renamed from `NEXT_PUBLIC_GOOGLE_CLIENT_ID`. Configure allowed JavaScript origins for the domain used to access the app. Without it, sample-calendar mode remains available.
+- No database is required by the imported app. The scaffold's database packages are retained but not used.
 
-## Where things live
+## Preservation boundaries
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- Preserve the original screens, fonts, colors, tab navigation, demo content, and API response envelopes.
+- Keep the existing browser-storage keys and shapes: progress is device/browser-local, not an account or shared database. Progress on the old Vercel origin does not automatically appear on a new Replit origin.
+- Documents sent during onboarding are processed for that request, not stored permanently.
+- The import is retained in `.migration-backup/` for reference and excluded from publishing.
+- Next.js rendering and route wrappers were replaced with React/Vite and Express; app-specific Claude logic and public opportunity-feed behavior remain unchanged.
 
-## Architecture decisions
+## Key source locations
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
-
-## Product
-
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
-
-## Pointers
-
-- See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details
+- `artifacts/trojan-arc/src/pages/home.tsx`: original six-tab app shell.
+- `artifacts/trojan-arc/src/components/`: original screens and onboarding.
+- `artifacts/trojan-arc/src/index.css`: original theme, animations, and typography.
+- `artifacts/api-server/src/routes/trojan/`: standard Request/Response handlers mounted in Express, including multipart onboarding.
+- `lib/api-spec/openapi.yaml`: API inventory; detailed imported domain validation remains in the backend's `lib/schemas.ts`.

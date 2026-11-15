@@ -11,6 +11,121 @@ tags:
   - name: health
     description: Health operations
 paths:
+  /status:
+    get:
+      operationId: getArcStatus
+      responses:
+        "200":
+          description: AI configuration status
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [live, model]
+                properties:
+                  live: { type: boolean }
+                  model: { type: string }
+  /onboard:
+    post:
+      operationId: onboardStudent
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/StudentSources"
+      responses:
+        "200":
+          description: Extracted profile and source findings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OnboardingResult"
+  /interview:
+    post:
+      operationId: getStudentInterview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentContext"
+      responses:
+        "200":
+          description: Tailored intake questions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mode: { type: string }
+                  questions:
+                    type: array
+                    items: { $ref: "#/components/schemas/ArcRecord" }
+  /roadmap:
+    post:
+      operationId: getStudentRoadmap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentContext"
+      responses:
+        "200":
+          description: Personalized requirements and phased quests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mode: { type: string }
+                  roadmap: { $ref: "#/components/schemas/ArcRecord" }
+  /radar:
+    post:
+      operationId: scanStudentOpportunities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentContext"
+      responses:
+        "200":
+          description: Campus and live-feed opportunities with fit scores
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mode: { type: string }
+                  liveFeed: { type: boolean }
+                  scanned: { type: integer }
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/ArcRecord" }
+                  fits:
+                    type: array
+                    items: { $ref: "#/components/schemas/ArcRecord" }
+  /advice:
+    post:
+      operationId: askStudentAdvice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudentQuestion"
+      responses:
+        "200":
+          description: Advice weighted by similarity to Trojan stories
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mode: { type: string }
+                  advice: { $ref: "#/components/schemas/ArcRecord" }
   /healthz:
     get:
       operationId: healthCheck
@@ -26,6 +141,50 @@ paths:
                 $ref: "#/components/schemas/HealthStatus"
 components:
   schemas:
+    ArcRecord:
+      type: object
+      additionalProperties: true
+      description: Original Trojan Arc domain object; exact validation lives in the preserved schemas.ts.
+    StudentContext:
+      type: object
+      required: [profile]
+      properties:
+        profile: { $ref: "#/components/schemas/ArcRecord" }
+        wins:
+          type: array
+          items: { $ref: "#/components/schemas/ArcRecord" }
+        doneQuests:
+          type: array
+          items: { type: string }
+    StudentQuestion:
+      type: object
+      required: [profile, question]
+      properties:
+        profile: { $ref: "#/components/schemas/ArcRecord" }
+        question: { type: string }
+    StudentSources:
+      type: object
+      properties:
+        github: { type: string }
+        website: { type: string }
+        text: { type: string }
+        linkedin: { type: string }
+        demo: { type: string }
+        files:
+          type: array
+          items: { type: string, format: binary }
+    OnboardingResult:
+      type: object
+      required: [mode, profile, found, missing]
+      properties:
+        mode: { type: string }
+        profile: { $ref: "#/components/schemas/ArcRecord" }
+        found:
+          type: array
+          items: { type: string }
+        missing:
+          type: array
+          items: { type: string }
     HealthStatus:
       type: object
       properties:
