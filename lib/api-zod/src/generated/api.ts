@@ -64,7 +64,7 @@ export const ScanStudentOpportunitiesBody = zod.object({
 export const ScanStudentOpportunitiesResponse = zod.object({
   "mode": zod.string().optional(),
   "liveFeed": zod.boolean().optional(),
-  "scanned": zod.number().int().optional(),
+  "scanned": zod.int().optional(),
   "items": zod.array(zod.record(zod.string(), zod.unknown()).describe('Original Trojan Arc domain object; exact validation lives in the preserved schemas.ts.')).optional(),
   "fits": zod.array(zod.record(zod.string(), zod.unknown()).describe('Original Trojan Arc domain object; exact validation lives in the preserved schemas.ts.')).optional()
 })
