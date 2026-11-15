@@ -1,19 +1,39 @@
 {
-  "name": "workspace",
-  "version": "0.0.0",
-  "license": "MIT",
-  "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
-  },
+  "name": "trojan-arc",
+  "version": "0.1.0",
   "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test:unit",
+    "test:unit": "tsx --conditions=react-server --test tests/ai-rate-limit.test.mjs tests/public-website.test.ts",
+    "test:arc": "node --test tests/arc-smoke.test.mjs",
+    "test:arc:browser": "node --test tests/arc-browser.test.mjs"
+  },
   "dependencies": {
-    "@replit/connectors-sdk": "^0.7.0"
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@phosphor-icons/react": "^2.1.10",
+    "fflate": "^0.8.3",
+    "ipaddr.js": "^2.5.0",
+    "next": "16.4.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
-    "prettier": "^3.9.10",
-    "typescript": "~5.9.3"
+    "@playwright/test": "^1.65.1",
+    "@tailwindcss/turbopack": "4.3.3",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.6",
+    "tailwindcss": "4.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^5"
   }
 }

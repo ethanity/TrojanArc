@@ -54,3 +54,14 @@ Thumbs.db
 .cache/
 .local/
 /generated-artifacts/
+
+# secrets: never commit API keys (.env.local, .env.production, ...)
+.env*
+!.env.example
+
+# Next.js
+/.next/
+next-env.d.ts
+
+# test output
+/generated-artifacts/

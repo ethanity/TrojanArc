@@ -1,28 +1,26 @@
-modules = ["nodejs-24", "python-base-3.13"]
+modules = ["nodejs-24"]
+run = "npm run dev -- -H 0.0.0.0 -p 3000"
 
 [deployment]
-router = "application"
 deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
+run = ["npm", "run", "start", "--", "-H", "0.0.0.0"]
 
-[deployment.postBuild]
-args = ["pnpm", "store", "prune"]
-env = { "CI" = "true" }
+[[ports]]
+localPort = 3000
+externalPort = 80
 
 [workflows]
 runButton = "Project"
 
 [[workflows.workflow]]
 name = "Project"
-mode = "parallel"
 author = "agent"
 
 [[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "artifacts/trojan-arc: web"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "artifacts/api-server: API Server"
+task = "shell.exec"
+args = "npm run dev -- -H 0.0.0.0 -p 3000"
+waitForPort = 3000
 
 [[workflows.workflow]]
 name = "arc-smoke"
@@ -30,15 +28,14 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "node --test scripts/src/arc-smoke.test.mjs"
+args = "ARC_TEST_URL=http://localhost:3000 npm run test:arc"
 
 [workflows.workflow.metadata]
 isValidation = true
 
 [agent]
-stack = "PNPM_WORKSPACE"
 expertMode = true
 
 [postMerge]
 path = "scripts/post-merge.sh"
-timeoutMs = 20000
+timeoutMs = 120000
