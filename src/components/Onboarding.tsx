@@ -459,28 +459,32 @@ function Landing({ onStart, onDemo, onCancel }: { onStart: () => void; onDemo: (
 
 /* ---------------- Main ---------------- */
 
-export default function Onboarding({ onDone, onCancel }: { onDone: () => void; onCancel?: () => void }) {
+export default function Onboarding({ onDone, onCancel, existing }: { onDone: () => void; onCancel?: () => void; existing?: Profile | null }) {
   const { setProfile, toast } = useStore();
-  const [step, setStep] = useState<Step>("welcome");
-  const [goal, setGoal] = useState("");
-  const [level, setLevel] = useState<Level>("Undergrad");
-  const [tags, setTags] = useState<string[]>([]);
-  const [customGoal, setCustomGoal] = useState(false);
-  const [timeline, setTimeline] = useState("");
-  const [prefs, setPrefs] = useState<string[]>([]);
+  // Re-scanning an existing profile skips the landing page and keeps everything already known.
+  const [step, setStep] = useState<Step>(existing ? "docs" : "welcome");
+  const [goal, setGoal] = useState(existing?.goal ?? "");
+  const [level, setLevel] = useState<Level>(/^master/i.test(existing?.year ?? "") ? "Master's" : /^phd/i.test(existing?.year ?? "") ? "PhD" : "Undergrad");
+  const [tags, setTags] = useState<string[]>(existing?.goalTags ?? []);
+  const [customGoal, setCustomGoal] = useState(Boolean(existing?.goal && !GOALS.some((g) => g.goal === existing.goal)));
+  const [timeline, setTimeline] = useState(existing?.timeline ?? "");
+  const [prefs, setPrefs] = useState<string[]>(existing?.preferences ? existing.preferences.split(", ").filter(Boolean) : []);
   const [files, setFiles] = useState<File[]>([]);
-  const [github, setGithub] = useState("");
-  const [website, setWebsite] = useState("");
+  const [github, setGithub] = useState(existing?.github ?? "");
+  const [website, setWebsite] = useState(existing?.links?.find((l) => !/github\.com|linkedin\.com/i.test(l)) ?? "");
   const [linkedin, setLinkedin] = useState<LinkedInSummary | null>(null);
   const [liBusy, setLiBusy] = useState(false);
   const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
-  const scannedKey = useRef("");
+  // On a re-scan, the sources already in the profile count as scanned: only new documents trigger a new read.
+  const scannedKey = useRef(existing ? `|${(existing.github ?? "").trim()}|${(existing.links?.find((l) => !/github\.com|linkedin\.com/i.test(l)) ?? "").trim()}|` : "");
+  const [ranScan, setRanScan] = useState(false);
   const liInput = useRef<HTMLInputElement>(null);
   const cal = useCalendar();
   const [drag, setDrag] = useState(false);
-  const [scan, setScan] = useState<Scan>({ state: "idle" });
-  const [basics, setBasics] = useState({ name: "", major: "", year: "", gradTerm: "" });
+  // An existing profile acts as the starting scan, so nothing is lost if no new documents are added.
+  const [scan, setScan] = useState<Scan>(existing ? { state: "done", result: { profile: existing, found: [], missing: [] } } : { state: "idle" });
+  const [basics, setBasics] = useState({ name: existing?.name ?? "", major: existing?.major ?? "", year: existing?.year ?? "", gradTerm: existing?.gradTerm ?? "" });
   const [showFound, setShowFound] = useState(false);
   const [error, setError] = useState("");
   const input = useRef<HTMLInputElement>(null);
@@ -493,7 +497,10 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const next = () => go(FLOW[Math.min(FLOW.length - 1, idx + 1)]);
-  const back = () => (idx <= 0 ? go("welcome") : go(FLOW[idx - 1]));
+  const back = () => {
+    if (existing && idx <= FLOW.indexOf("docs")) return onCancel?.(); // re-scan: back means "return to my profile"
+    return idx <= 0 ? go("welcome") : go(FLOW[idx - 1]);
+  };
 
   useEffect(() => () => { if (advanceTimer.current) clearTimeout(advanceTimer.current); }, []);
 
@@ -512,6 +519,7 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
     const li = opts.li === undefined ? linkedin : opts.li;
     if (!opts.demo && !list.length && !github.trim() && !website.trim() && !li) return;
     scannedKey.current = opts.demo ? "demo" : sourceKey(list, li);
+    setRanScan(true);
     setScan({ state: "scanning" });
     try {
       const fd = new FormData();
@@ -628,8 +636,9 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
       certifications: uniq(base.certifications, linkedin?.certifications),
       languages: uniq(base.languages, linkedin?.languages),
       awards: uniq(base.awards, linkedin?.awards),
-      network: linkedin?.network ?? base.network,
-      connectionsTotal: linkedin?.connectionsTotal ?? base.connectionsTotal,
+      // A new scan never drops what an earlier one learned: fall back to the existing profile.
+      network: linkedin?.network ?? existing?.network ?? base.network,
+      connectionsTotal: linkedin?.connectionsTotal ?? existing?.connectionsTotal ?? base.connectionsTotal,
       links: uniq(base.links, website.trim() ? [website.trim()] : []),
       hoursPerWeek: byField("hoursPerWeek")[0] ?? base.hoursPerWeek,
       workAuth: byField("workAuth")[0] ?? base.workAuth,
@@ -671,7 +680,7 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
   return (
     <div className="mx-auto flex min-h-dvh max-w-2xl flex-col px-4 pb-16 pt-6 sm:px-6">
       {/* Top bar: back, progress, background-scan status */}
-      <div className="sticky top-0 z-10 pb-3 pt-2">
+      <div className="sticky top-0 z-10 pb-3 pt-2 before:pointer-events-none before:absolute before:inset-y-0 before:left-1/2 before:-z-10 before:w-screen before:-translate-x-1/2 before:border-b before:border-hairline before:bg-bg/90 before:backdrop-blur-md before:content-['']">
         <div className="flex items-center gap-3">
           <button className="grid h-10 w-10 place-items-center rounded-xl text-muted transition-colors hover:bg-ink/5 hover:text-text" onClick={back} aria-label="Back">
             <ArrowLeft size={20} />
@@ -681,7 +690,7 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
           </div>
           <span className="w-10 text-right text-[12.5px] font-medium text-faint">{idx + 1}/{FLOW.length}</span>
         </div>
-        {step !== "docs" && step !== "confirm" && <div className="mt-3 flex justify-center"><ScanPill scan={scan} files={files.length} /></div>}
+        {step !== "docs" && step !== "confirm" && <div className="mt-3 flex justify-center">{ranScan && <ScanPill scan={scan} files={files.length} />}</div>}
       </div>
 
       <div className="flex flex-1 flex-col justify-center py-8" key={step}>

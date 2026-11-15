@@ -140,7 +140,7 @@ export default function Home() {
     return (
       <main className="relative z-10">
         {overlays}
-        <Onboarding onDone={() => { setOnboarding(false); go("quests"); }} onCancel={profile ? () => setOnboarding(false) : undefined} />
+        <Onboarding existing={onboarding ? profile : null} onDone={() => { setOnboarding(false); go(onboarding ? "character" : "quests"); }} onCancel={profile ? () => setOnboarding(false) : undefined} />
       </main>
     );
   }
