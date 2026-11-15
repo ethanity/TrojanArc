@@ -99,6 +99,65 @@ test("demo onboarding, navigation, advice, and persistent progress", { timeout: 
     assert.ok(await page.locator("#main").innerText());
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
     await page.screenshot({ path: `${output}/mobile.jpg`, fullPage: true });
+    await page.evaluate(() => {
+      const state = JSON.parse(localStorage.getItem("trojan-arc:v1"));
+      const items = Array.from({ length: 6 }, (_, index) => {
+        const date = new Date();
+        date.setDate(date.getDate() + 2 + Math.floor(index / 2));
+        const deadline = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+        return {
+          id: `close-deadline-${index}`,
+          kind: "internship",
+          title: `Deadline headline ${index + 1}: an opportunity title that needs room to wrap onto another line`,
+          org: `USC partner ${index + 1}`,
+          location: "Los Angeles",
+          url: "",
+          deadline,
+          posted: "",
+          tags: ["internship"],
+          source: "USC sample",
+          details: `Readable description for deadline ${index + 1}. This is adjacent to other dates and should stay separate rather than overlap its neighbors.`,
+        };
+      });
+      state.radar = {
+        items,
+        fits: items.map((item) => ({
+          id: item.id, fit: 90, verdict: "strong", reason: "A good fit.",
+          blocker: "", nextAction: "Review the details.",
+        })),
+        scanned: items.length,
+        at: new Date().toISOString(),
+      };
+      localStorage.setItem("trojan-arc:v1", JSON.stringify(state));
+    });
+    await page.reload();
+    const radarNav = page.getByRole("navigation", { name: "Main", exact: true }).filter({ visible: true });
+    await radarNav.getByRole("button", { name: "Radar", exact: true }).click();
+    const deadlineList = page.getByTestId("deadline-list");
+    const deadlineCards = page.getByTestId("deadline-item");
+    assert.equal(await deadlineCards.count(), 6);
+    for (let i = 1; i <= 6; i++) {
+      await deadlineList.getByRole("heading", { name: new RegExp(`Deadline headline ${i}:`) }).waitFor();
+      await deadlineList.getByText(`Readable description for deadline ${i}.`, { exact: false }).waitFor();
+    }
+    const assertCardsDoNotOverlap = async () => {
+      const rects = await deadlineCards.evaluateAll((cards) => cards.map((card) => {
+        const { x, y, width, height } = card.getBoundingClientRect();
+        return { left: x, top: y, right: x + width, bottom: y + height };
+      }));
+      for (let i = 0; i < rects.length; i++) {
+        for (let j = i + 1; j < rects.length; j++) {
+          const a = rects[i], b = rects[j];
+          assert.ok(a.right <= b.left || b.right <= a.left || a.bottom <= b.top || b.bottom <= a.top,
+            `Deadline cards ${i + 1} and ${j + 1} should not overlap`);
+        }
+      }
+    };
+    await assertCardsDoNotOverlap();
+    await page.screenshot({ path: `${output}/deadlines-mobile.jpg`, fullPage: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await assertCardsDoNotOverlap();
+    await page.screenshot({ path: `${output}/deadlines-desktop.jpg`, fullPage: true });
     assert.deepEqual(errors, [], "No browser runtime errors");
   } finally {
     await browser.close();

@@ -275,7 +275,7 @@ export function DeadlineTimeline({ items, right }: { items: Opportunity[]; right
   return (
     <div>
       {right}
-      <div className="relative mx-2 h-[150px]">
+      <div className="relative mx-2 h-[72px]">
         <div className="absolute inset-x-0 top-1/2 h-px bg-hairline-2" />
         <div className="absolute left-0 top-1/2 h-px w-full bg-gradient-to-r from-cardinal via-cardinal/40 to-transparent" />
         {months.map((m) => (
@@ -287,19 +287,47 @@ export function DeadlineTimeline({ items, right }: { items: Opportunity[]; right
         <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <span className="block h-3 w-3 rounded-full bg-gold shadow-[0_0_10px_#f2c230]" />
         </div>
-        {pts.map(({ o, d }, i) => {
+        {pts.map(({ o, d }) => {
           const days = Math.ceil((d.getTime() - now.getTime()) / 86400000);
-          const up = i % 2 === 0;
           const urgent = days <= 14;
           return (
-            <div key={o.id} className="absolute top-1/2 -translate-x-1/2" style={{ left: `${Math.min(97, Math.max(3, x(d)))}%` }}>
-              <span className={`absolute left-1/2 block w-px -translate-x-1/2 ${up ? "bottom-0 h-7" : "top-0 h-7"} ${urgent ? "bg-cardinal" : "bg-hairline-2"}`} />
-              <span className={`absolute left-1/2 block h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ${urgent ? "bg-cardinal shadow-[0_0_8px_#d62f3c]" : "bg-muted"}`} />
-              <div className={`absolute left-1/2 w-[120px] -translate-x-1/2 text-center ${up ? "bottom-8" : "top-8"}`}>
-                <p className={`game text-[12px] font-semibold ${urgent ? "text-cardinal" : "text-text"}`}>{o.deadline} · {days}d</p>
-                <p className="line-clamp-2 text-[11px] leading-tight text-muted">{o.title}</p>
+            <span
+              key={o.id}
+              aria-label={`${o.title}, due ${o.deadline}`}
+              title={`${o.title} · ${o.deadline}`}
+              className={`absolute top-1/2 block h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-bg ${urgent ? "bg-cardinal shadow-[0_0_8px_#d62f3c]" : "bg-muted"}`}
+              style={{ left: `${Math.min(97, Math.max(3, x(d)))}%` }}
+            />
+          );
+        })}
+      </div>
+      <div data-testid="deadline-list" className="grid gap-2 sm:grid-cols-2">
+        {pts.map(({ o, d }) => {
+          const days = Math.ceil((d.getTime() - now.getTime()) / 86400000);
+          const urgent = days <= 14;
+          return (
+            <article
+              key={o.id}
+              data-testid="deadline-item"
+              className="flex min-w-0 items-start gap-3 rounded-xl border border-hairline bg-surface-2/60 p-3"
+            >
+              <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl text-center ${urgent ? "bg-[#ffe1e5] text-cardinal-deep" : "bg-surface-3 text-muted"}`}>
+                <span>
+                  <span className="block text-[9px] font-semibold uppercase leading-none">{d.toLocaleString(undefined, { month: "short" })}</span>
+                  <span className="game block text-[18px] font-bold leading-tight">{d.getDate()}</span>
+                </span>
               </div>
-            </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                  <h3 className="break-words text-[13px] font-semibold leading-snug">{o.title}</h3>
+                  <span className={`shrink-0 text-[11px] font-semibold ${urgent ? "text-cardinal" : "text-muted"}`}>
+                    {days <= 0 ? "Due today" : `${days} days left`}
+                  </span>
+                </div>
+                <p className="mt-1 break-words text-[12px] leading-relaxed text-muted">{o.details || o.org}</p>
+                <p className="mt-1 text-[10.5px] font-medium text-faint">{o.org} · {o.deadline}</p>
+              </div>
+            </article>
           );
         })}
       </div>
