@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   ArrowLeft,
   ArrowRight,
@@ -46,12 +47,15 @@ import { AiWorking, Avatar, Bar, Card, Chip, ErrorNote } from "./ui";
 import { LevelRing, RadarScope, RankBadge } from "./viz";
 import { RANKS } from "@/lib/game";
 import type { FitResult, Opportunity } from "@/lib/types";
+import { USC_MAJORS } from "@/lib/data/usc-majors";
 
 /* ---------------- Data ---------------- */
 
 type Level = "Undergrad" | "Master's" | "PhD";
 const LEVELS: Level[] = ["Undergrad", "Master's", "PhD"];
 const U: Level[] = ["Undergrad"], M: Level[] = ["Master's"], D: Level[] = ["PhD"], ALL: Level[] = ["Undergrad", "Master's", "PhD"];
+const USC_GRADUATE_MAJORS = ["MS Computer Science", "MS Data Science", "MS Electrical and Computer Engineering", "MBA"];
+const USC_MAJOR_OPTIONS = [...USC_MAJORS, ...USC_GRADUATE_MAJORS];
 
 const GOALS = [
   { label: "Robotics / AI internship", goal: "Robotics / physical AI internship", tags: ["robotics", "ml", "internship"], Icon: Robot, levels: U },
@@ -207,7 +211,7 @@ function GradPicker({ value, onChange }: { value: string; onChange: (v: string) 
   );
 }
 
-function InlineField({ label, value, onChange, placeholder, list, big = false }: { label: string; value: string; onChange: (v: string) => void; placeholder: string; list?: string; big?: boolean }) {
+function InlineField({ label, value, onChange, placeholder, big = false }: { label: string; value: string; onChange: (v: string) => void; placeholder: string; big?: boolean }) {
   return (
     <label className="group block">
       <span className="text-[12px] font-medium text-faint">{label}</span>
@@ -218,10 +222,164 @@ function InlineField({ label, value, onChange, placeholder, list, big = false }:
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
-          list={list}
         />
         <PencilSimple size={big ? 18 : 14} className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
       </span>
+    </label>
+  );
+}
+
+function MajorField({ value, onChange }: { value: string; onChange: (value: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const listboxId = useId();
+  const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [position, setPosition] = useState<{
+    left: number;
+    top: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
+  const filtered = USC_MAJOR_OPTIONS.filter((major) => major.toLowerCase().includes(value.trim().toLowerCase()));
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const rect = inputRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const width = Math.min(rect.width, window.innerWidth - 24);
+      const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
+      const below = window.innerHeight - rect.bottom - 16;
+      const above = rect.top - 16;
+      const openAbove = below < 180 && above > below;
+      const maxHeight = Math.max(120, Math.min(320, openAbove ? above : below));
+      setPosition({
+        left,
+        width,
+        maxHeight,
+        top: openAbove ? Math.max(8, rect.top - maxHeight - 6) : rect.bottom + 6,
+      });
+    };
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, true);
+    return () => {
+      window.removeEventListener("resize", place);
+      window.removeEventListener("scroll", place, true);
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (!inputRef.current?.parentElement?.parentElement?.contains(target) && !dropdownRef.current?.contains(target)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideClick);
+  }, [open]);
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [value]);
+
+  const choose = (major: string) => {
+    onChange(major);
+    setOpen(false);
+  };
+
+  return (
+    <label className="group block">
+      <span className="text-[12px] font-medium text-faint">Major</span>
+      <span className="relative mt-0.5 block">
+        <input
+          ref={inputRef}
+          role="combobox"
+          aria-label="Major"
+          aria-autocomplete="list"
+          aria-expanded={open}
+          aria-controls={open ? listboxId : undefined}
+          aria-activedescendant={open && filtered.length ? `${listboxId}-option-${activeIndex}` : undefined}
+          className="w-full border-b-2 border-transparent bg-transparent pb-1 pr-9 text-[16px] font-medium outline-none transition-colors placeholder:text-faint hover:border-hairline-2 focus:border-cardinal"
+          value={value}
+          onFocus={() => setOpen(true)}
+          onChange={(event) => {
+            onChange(event.target.value);
+            setOpen(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowDown") {
+              event.preventDefault();
+              setOpen(true);
+              setActiveIndex((index) => filtered.length ? (index + 1) % filtered.length : 0);
+            } else if (event.key === "ArrowUp") {
+              event.preventDefault();
+              setOpen(true);
+              setActiveIndex((index) => filtered.length ? (index - 1 + filtered.length) % filtered.length : 0);
+            } else if (event.key === "Enter" && open && filtered.length) {
+              event.preventDefault();
+              choose(filtered[activeIndex] ?? filtered[0]);
+            } else if (event.key === "Escape") {
+              setOpen(false);
+            }
+          }}
+          placeholder="Search USC majors"
+        />
+        <button
+          type="button"
+          aria-label="Show USC majors"
+          aria-expanded={open}
+          onClick={() => {
+            setOpen((shown) => !shown);
+            inputRef.current?.focus();
+          }}
+          className="absolute right-0 top-1/2 -translate-y-1/2 rounded-md p-1 text-faint transition-colors hover:bg-ink/5 hover:text-text"
+        >
+          <CaretDown size={16} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      </span>
+      {open && position && createPortal(
+        <div
+          ref={dropdownRef}
+          className="fixed z-[100] overflow-hidden rounded-xl border border-hairline-2 bg-surface text-text shadow-xl"
+          style={{ left: position.left, top: position.top, width: position.width }}
+        >
+          <div
+            id={listboxId}
+            role="listbox"
+            aria-label="USC majors"
+            className="overflow-y-auto overscroll-contain p-1.5"
+            style={{ maxHeight: position.maxHeight }}
+          >
+            {filtered.length ? filtered.map((major, index) => (
+              <button
+                id={`${listboxId}-option-${index}`}
+                key={major}
+                type="button"
+                role="option"
+                aria-selected={major === value}
+                onMouseDown={(event) => event.preventDefault()}
+                onMouseEnter={() => setActiveIndex(index)}
+                onClick={() => choose(major)}
+                className={`block w-full rounded-lg px-3 py-2 text-left text-[13px] leading-snug transition-colors ${
+                  index === activeIndex ? "bg-cardinal/10 text-cardinal-deep" : "hover:bg-surface-2"
+                }`}
+              >
+                {major}
+              </button>
+            )) : (
+              <p className="px-3 py-4 text-[13px] text-muted">No matching listed majors. You can keep your own entry.</p>
+            )}
+          </div>
+          <p className="border-t border-hairline px-3 py-2 text-[11px] text-muted">
+            {USC_MAJORS.length} USC bachelor&apos;s programs plus graduate choices · type to filter
+          </p>
+        </div>,
+        document.body,
+      )}
     </label>
   );
 }
@@ -977,10 +1135,9 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
                 <div className="space-y-5">
                   <InlineField label="Name" big value={basics.name} onChange={(v) => setBasics((b) => ({ ...b, name: v }))} placeholder="Your name" />
                   <div className="grid gap-5 sm:grid-cols-[1.25fr_1fr]">
-                    <InlineField label="Major" value={basics.major} onChange={(v) => setBasics((b) => ({ ...b, major: v }))} placeholder="Start typing your major" list="usc-majors" />
+                    <MajorField value={basics.major} onChange={(major) => setBasics((b) => ({ ...b, major }))} />
                     <GradPicker value={basics.gradTerm} onChange={(v) => setBasics((b) => ({ ...b, gradTerm: v }))} />
                   </div>
-                  <datalist id="usc-majors">{MAJORS.map((m) => <option key={m} value={m} />)}</datalist>
                   <div>
                     <span className="text-[12px] font-medium text-faint">Year</span>
                     <div className="mt-1.5 flex flex-wrap gap-1.5">

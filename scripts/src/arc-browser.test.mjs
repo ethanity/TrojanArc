@@ -4,7 +4,7 @@ import { globSync, mkdirSync } from "node:fs";
 import { chromium } from "@playwright/test";
 
 const base = process.env.ARC_TEST_URL ?? "http://localhost:80";
-const output = "generated-artifacts/arc-tests";
+const output = "../generated-artifacts/arc-tests";
 
 test("demo onboarding, navigation, advice, and persistent progress", { timeout: 120000 }, async () => {
   mkdirSync(output, { recursive: true });
@@ -26,6 +26,41 @@ test("demo onboarding, navigation, advice, and persistent progress", { timeout: 
       const input = document.querySelector('input[value="Alex Chen"]');
       return input || [...document.querySelectorAll("input")].some((el) => el.value.length > 0);
     });
+    const majorInput = page.getByRole("combobox", { name: "Major" });
+    await majorInput.fill("");
+    const majorList = page.getByRole("listbox", { name: "USC majors" });
+    assert.equal(await majorList.getByRole("option").count(), 206, "Show all USC undergraduate programs and existing graduate choices");
+    await majorList.getByRole("option", { name: "MS Computer Science", exact: true }).waitFor();
+    const dropdownPosition = await page.evaluate(() => {
+      const input = document.querySelector('[role="combobox"][aria-label="Major"]');
+      const popup = document.querySelector('[role="listbox"][aria-label="USC majors"]');
+      const field = input.getBoundingClientRect();
+      const menu = popup.getBoundingClientRect();
+      return { fieldLeft: field.left, fieldBottom: field.bottom, menuLeft: menu.left, menuTop: menu.top };
+    });
+    assert.ok(Math.abs(dropdownPosition.fieldLeft - dropdownPosition.menuLeft) < 2, "Dropdown aligns with the major field");
+    assert.ok(dropdownPosition.menuTop >= dropdownPosition.fieldBottom, "Dropdown opens directly beneath the major field");
+    await page.screenshot({ path: `${output}/major-dropdown.jpg` });
+    await majorInput.fill("Aerospace Engineering");
+    await majorInput.press("ArrowDown");
+    await majorInput.press("Enter");
+    assert.equal(await majorInput.inputValue(), "Aerospace Engineering (BS)");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await majorInput.fill("");
+    const mobilePosition = await page.evaluate(() => {
+      const field = document.querySelector('[role="combobox"][aria-label="Major"]').getBoundingClientRect();
+      const menu = document.querySelector('[role="listbox"][aria-label="USC majors"]').getBoundingClientRect();
+      return { fieldLeft: field.left, fieldTop: field.top, fieldBottom: field.bottom, menuLeft: menu.left, menuRight: menu.right, menuTop: menu.top, menuBottom: menu.bottom };
+    });
+    assert.ok(mobilePosition.menuLeft >= 0 && mobilePosition.menuRight <= 390, "Major options fit within the phone viewport");
+    assert.ok(Math.abs(mobilePosition.fieldLeft - mobilePosition.menuLeft) < 2, "Phone dropdown stays aligned with the major field");
+    assert.ok(
+      mobilePosition.menuTop >= mobilePosition.fieldBottom || mobilePosition.menuBottom <= mobilePosition.fieldTop,
+      "Phone dropdown stays directly above or below the major field",
+    );
+    await page.screenshot({ path: `${output}/major-dropdown-mobile.jpg` });
+    await majorInput.press("Escape");
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await start.click();
     const nav = page.getByRole("navigation", { name: "Main", exact: true }).filter({ visible: true });
     await nav.getByRole("button", { name: "Quest map", exact: true }).waitFor();
