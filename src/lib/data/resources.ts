@@ -118,11 +118,14 @@ export function resourcesPrompt(): string {
 export const RESOURCE_URLS: Record<string, string> = {
   "USC Career Center": "https://careers.usc.edu/",
   "Viterbi Career Connections": "https://viterbicareers.usc.edu/",
+  "Viterbi Career & Internship Expo": "https://viterbicareers.usc.edu/careerexpo/",
+  "Viterbi Career Fair": "https://viterbicareers.usc.edu/careerexpo/",
+  "Viterbi Startup Garage": "https://viterbiinnovation.usc.edu/", // Viterbi Technology Innovation & Entrepreneurship hub (runs the Garage)
   "CURVE (Center for Undergraduate Research in Viterbi Engineering)": "https://viterbiundergrad.usc.edu/research/curve/",
   "Kortschak Center for Learning and Creativity": "https://kortschakcenter.usc.edu/",
-  "Viterbi Academic Advising": "https://viterbiundergrad.usc.edu/",
+  "Viterbi Academic Advising": "https://viterbiundergrad.usc.edu/viterbi-undergraduate-advising/",
   "Lloyd Greif Center for Entrepreneurial Studies": "https://www.marshall.usc.edu/departments/lloyd-greif-center-entrepreneurial-studies",
-  "USC Counseling and Mental Health": "https://studenthealth.usc.edu/counseling/",
+  "USC Counseling and Mental Health": "https://sites.usc.edu/counselingandmentalhealth/",
   "CSCI 445L Introduction to Robotics": "https://classes.usc.edu/",
   "CSCI 467 Introduction to Machine Learning": "https://classes.usc.edu/",
   "USC School of Cinematic Arts": "https://cinema.usc.edu/",
@@ -131,9 +134,9 @@ export const RESOURCE_URLS: Record<string, string> = {
   "USC Graduate School": "https://graduateschool.usc.edu/",
   "Office of International Services (OIS)": "https://ois.usc.edu/",
   "USC Libraries": "https://libraries.usc.edu/",
-  HackSC: "https://hacksc.com/",
+  HackSC: "https://www.hacksc.com/",
   "USC Writing Center": "https://dornsife.usc.edu/writingcenter/",
-  "Trojan Network": "https://alumni.usc.edu/", // USC Alumni Association hosts the Trojan Network
+  "Trojan Network": "https://alumni.usc.edu/trojan-connects/", // Trojan Connects: USC Alumni Association's networking/mentoring platform
 };
 
 /** Link for a resource name, or a course code (e.g. "CSCI 467") -> USC Schedule of Classes. */
