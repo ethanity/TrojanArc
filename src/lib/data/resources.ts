@@ -132,6 +132,8 @@ export const RESOURCE_URLS: Record<string, string> = {
   "Office of International Services (OIS)": "https://ois.usc.edu/",
   "USC Libraries": "https://libraries.usc.edu/",
   HackSC: "https://hacksc.com/",
+  "USC Writing Center": "https://dornsife.usc.edu/writingcenter/",
+  "Trojan Network": "https://alumni.usc.edu/", // USC Alumni Association hosts the Trojan Network
 };
 
 /** Link for a resource name, or a course code (e.g. "CSCI 467") -> USC Schedule of Classes. */

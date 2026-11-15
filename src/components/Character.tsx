@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowsClockwise, Books, Briefcase, Code, Flag, GithubLogo, SignOut, Trophy, UsersThree } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
+import { resourceUrl } from "@/lib/data/resources";
 import { useCalendar } from "@/lib/calendar";
 import { completeness } from "@/lib/completeness";
 import { computeStats, levelFromXp, rankFor } from "@/lib/game";
@@ -90,7 +91,17 @@ export default function Character({ onRescan }: { onRescan: () => void }) {
               {(profile.remainingRequirements?.length ?? 0) > 0 && (
                 <div>
                   <p className="mb-2 text-[13px] font-semibold">Still needed to graduate{profile.unitsCompleted ? ` · ${profile.unitsCompleted} units done` : ""}</p>
-                  <ul className="space-y-1.5 text-[13px] text-muted">{profile.remainingRequirements!.slice(0, 6).map((r) => <li key={r}>· {r}</li>)}</ul>
+                  <ul className="space-y-1.5 text-[13px] text-muted">{profile.remainingRequirements!.slice(0, 6).map((r) => (
+                    <li key={r}>
+                      {resourceUrl(r) ? (
+                        <a href={resourceUrl(r)} target="_blank" rel="noreferrer" className="underline decoration-hairline-2 underline-offset-2 hover:text-cardinal hover:decoration-cardinal" title="Look it up in the USC Schedule of Classes">
+                          · {r} ↗
+                        </a>
+                      ) : (
+                        <>· {r}</>
+                      )}
+                    </li>
+                  ))}</ul>
                 </div>
               )}
               <div>

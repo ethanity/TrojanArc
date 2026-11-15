@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, Check, Clock, MapPin, Plus, PushPin } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
+import { resourceUrl } from "@/lib/data/resources";
 import { useCalendar } from "@/lib/calendar";
 import { levelFromXp, rankFor } from "@/lib/game";
 import { RankBadge } from "./viz";
@@ -115,7 +116,11 @@ export default function Today({ go }: { go: (tab: string) => void }) {
               )}
               <span className="ml-auto flex items-center gap-3 text-[13px] text-faint">
                 <span className="flex items-center gap-1"><Clock size={14} />{next.effort}</span>
-                {next.resource && <span className="hidden truncate sm:inline">{next.resource}</span>}
+                {next.resource && (resourceUrl(next.resource) ? (
+                  <a href={resourceUrl(next.resource)} target="_blank" rel="noreferrer" className="hidden truncate font-medium text-cardinal hover:underline sm:inline">{next.resource} ↗</a>
+                ) : (
+                  <span className="hidden truncate sm:inline">{next.resource}</span>
+                ))}
               </span>
             </div>
           </div>
