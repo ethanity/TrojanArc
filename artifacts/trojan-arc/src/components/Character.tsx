@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowsClockwise, Books, Briefcase, Code, Flag, GithubLogo, SignOut, Trophy, UsersThree } from "@phosphor-icons/react";
+import { ArrowsClockwise, Books, Briefcase, Code, Flag, GithubLogo, LinkedinLogo, SignOut, Trophy, UsersThree } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { useCalendar } from "@/lib/calendar";
 import { completeness } from "@/lib/completeness";
@@ -37,6 +37,16 @@ export default function Character({ onRescan }: { onRescan: () => void }) {
               {profile.gpa ? <Chip tone="gold">GPA {profile.gpa.toFixed(2)}</Chip> : null}
               {profile.github && <Chip icon={<GithubLogo size={13} />}>{profile.github}</Chip>}
             </div>
+            {profile.linkedinUrl && (
+              <a
+                href={profile.linkedinUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1.5 text-[12.5px] text-white/85 underline-offset-2 hover:underline"
+              >
+                <LinkedinLogo size={15} weight="fill" /> View LinkedIn profile
+              </a>
+            )}
             <div className="mt-6 flex items-center gap-4">
               <RankBadge rank={rankFor(lv.level)} size={64} />
               <div>

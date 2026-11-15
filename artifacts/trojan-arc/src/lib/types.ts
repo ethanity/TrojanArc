@@ -27,6 +27,7 @@ export interface Profile {
   experience: { role: string; org: string; summary: string }[];
   clubs: string[];
   github: string;
+  linkedinUrl?: string;
   // ---- Deeper profile (optional; filled by scans, integrations and the AI interview) ----
   interests?: string[];
   awards?: string[];

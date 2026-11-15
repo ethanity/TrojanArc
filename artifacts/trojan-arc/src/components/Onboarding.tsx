@@ -27,7 +27,6 @@ import {
   CircleNotch,
   Code,
   FilePdf,
-  FileZip,
   Flask,
   GithubLogo,
   Globe,
@@ -41,7 +40,6 @@ import {
 import { useStore } from "@/lib/store";
 import type { InterviewQuestion, OnboardResult, Profile } from "@/lib/types";
 import { useCalendar } from "@/lib/calendar";
-import { parseLinkedInZip, type LinkedInSummary } from "@/lib/linkedin";
 import { completeness } from "@/lib/completeness";
 import { AiWorking, Avatar, Bar, Card, Chip, ErrorNote } from "./ui";
 import { LevelRing, RadarScope, RankBadge } from "./viz";
@@ -107,6 +105,23 @@ function schoolFor(major: string): string {
   if (/^mba$|accounting/.test(m)) return "Marshall School of Business";
   if (/public policy/.test(m)) return "Price School of Public Policy";
   return m ? "Dornsife College" : "";
+}
+
+function normalizeLinkedInProfileUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  try {
+    const url = new URL(/^[a-z][a-z\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    const hostname = url.hostname.toLowerCase();
+    if (
+      !["http:", "https:"].includes(url.protocol)
+      || !(hostname === "linkedin.com" || hostname === "www.linkedin.com")
+      || !/^\/in\/[^/]+\/?$/i.test(url.pathname)
+    ) return "";
+    return `https://www.linkedin.com${url.pathname.replace(/\/+$/, "")}`;
+  } catch {
+    return "";
+  }
 }
 
 function tagsFromText(t: string): string[] {
@@ -623,12 +638,10 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
   const [files, setFiles] = useState<File[]>([]);
   const [github, setGithub] = useState("");
   const [website, setWebsite] = useState("");
-  const [linkedin, setLinkedin] = useState<LinkedInSummary | null>(null);
-  const [liBusy, setLiBusy] = useState(false);
+  const [linkedinUrl, setLinkedinUrl] = useState("");
   const [questions, setQuestions] = useState<InterviewQuestion[] | null>(null);
   const [answers, setAnswers] = useState<Record<string, string[]>>({});
   const scannedKey = useRef("");
-  const liInput = useRef<HTMLInputElement>(null);
   const cal = useCalendar();
   const [drag, setDrag] = useState(false);
   const [scan, setScan] = useState<Scan>({ state: "idle" });
@@ -637,6 +650,8 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
   const [error, setError] = useState("");
   const input = useRef<HTMLInputElement>(null);
   const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const linkedinProfileUrl = normalizeLinkedInProfileUrl(linkedinUrl);
+  const invalidLinkedinUrl = linkedinUrl.trim().length > 0 && !linkedinProfileUrl;
 
   const idx = FLOW.indexOf(step);
   const go = (s: Step) => {
@@ -657,13 +672,12 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
     setBasics((b) => ({ name: b.name || p.name, major: b.major || p.major, year: b.year || p.year, gradTerm: b.gradTerm || normalizeGrad(p.gradTerm) }));
   }, [scan]);
 
-  const sourceKey = (list: File[], li: LinkedInSummary | null) => `${list.map((f) => f.name + f.size).join()}|${github.trim()}|${website.trim()}|${li?.connectionsTotal ?? ""}`;
+  const sourceKey = (list: File[]) => `${list.map((f) => f.name + f.size).join()}|${github.trim()}|${website.trim()}`;
 
-  async function runScan(opts: { demo?: boolean; fileList?: File[]; li?: LinkedInSummary | null } = {}) {
+  async function runScan(opts: { demo?: boolean; fileList?: File[] } = {}) {
     const list = opts.fileList ?? files;
-    const li = opts.li === undefined ? linkedin : opts.li;
-    if (!opts.demo && !list.length && !github.trim() && !website.trim() && !li) return;
-    scannedKey.current = opts.demo ? "demo" : sourceKey(list, li);
+    if (!opts.demo && !list.length && !github.trim() && !website.trim()) return;
+    scannedKey.current = opts.demo ? "demo" : sourceKey(list);
     setScan({ state: "scanning" });
     try {
       const fd = new FormData();
@@ -672,7 +686,6 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
         list.forEach((f) => fd.append("files", f));
         fd.append("github", github);
         fd.append("website", website);
-        if (li) fd.append("linkedin", li.digest);
       }
       const res = await fetch("/api/onboard", { method: "POST", body: fd });
       const data = await res.json();
@@ -689,36 +702,24 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
     advanceTimer.current = setTimeout(() => go(to), ms);
   }
 
-  async function importLinkedIn(f: File) {
-    setLiBusy(true);
-    setError("");
-    try {
-      const sum = await parseLinkedInZip(f);
-      if (!sum.connectionsTotal && !sum.digest) throw new Error("That ZIP doesn't look like a LinkedIn data export.");
-      setLinkedin(sum);
-      return sum;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't read that ZIP.");
-      return linkedin;
-    } finally {
-      setLiBusy(false);
-    }
-  }
-
   async function addFiles(list: FileList | null) {
     if (!list?.length) return;
     const all = Array.from(list);
     const zip = all.find((f) => /\.zip$/i.test(f.name));
     const docs = all.filter((f) => !/\.zip$/i.test(f.name));
-    const li = zip ? await importLinkedIn(zip) : linkedin;
+    if (zip) setError("LinkedIn ZIP exports are no longer used. Add your LinkedIn profile link instead.");
     const merged = [...files, ...docs].slice(0, 6);
     setFiles(merged);
-    runScan({ fileList: merged, li }); // start reading right away, in the background
+    if (docs.length) runScan({ fileList: merged }); // start reading right away, in the background
   }
 
   function continueFromDocs() {
-    const any = files.length || github.trim() || website.trim() || linkedin;
-    if (any && sourceKey(files, linkedin) !== scannedKey.current) runScan();
+    if (linkedinUrl.trim() && !normalizeLinkedInProfileUrl(linkedinUrl)) {
+      setError("Enter a valid LinkedIn profile link, such as linkedin.com/in/your-name.");
+      return;
+    }
+    const hasScanSources = files.length || github.trim() || website.trim();
+    if (hasScanSources && sourceKey(files) !== scannedKey.current) runScan();
     next();
   }
 
@@ -776,19 +777,14 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
       timeline: timeline || base.timeline,
       preferences: prefs.join(", ") || base.preferences,
       github: base.github || github.replace(/^@/, ""),
-      skills: uniq(base.skills, linkedin?.skills).slice(0, 40),
-      certifications: uniq(base.certifications, linkedin?.certifications),
-      languages: uniq(base.languages, linkedin?.languages),
-      awards: uniq(base.awards, linkedin?.awards),
-      network: linkedin?.network ?? base.network,
-      connectionsTotal: linkedin?.connectionsTotal ?? base.connectionsTotal,
+      linkedinUrl: linkedinProfileUrl || base.linkedinUrl,
       links: uniq(base.links, website.trim() ? [website.trim()] : []),
       hoursPerWeek: byField("hoursPerWeek")[0] ?? base.hoursPerWeek,
       workAuth: byField("workAuth")[0] ?? base.workAuth,
       priorities: byField("priorities").length ? byField("priorities") : base.priorities,
       interests: uniq(byField("interests"), base.interests),
       answers: qa.map((q) => ({ q: q.question, a: answers[q.id].join(", ") })),
-      sources: uniq(base.sources, linkedin ? ["LinkedIn export"] : [], cal.status === "connected" ? ["Google Calendar"] : []),
+      sources: uniq(base.sources, linkedinProfileUrl ? ["LinkedIn profile link"] : [], cal.status === "connected" ? ["Google Calendar"] : []),
     };
   }
 
@@ -925,10 +921,10 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
                     <UploadSimple size={26} weight="bold" />
                   </span>
                   <p className="mt-4 text-[17px] font-semibold">Drop your resume, transcript or STARS report</p>
-                  <p className="mt-1 text-[13px] text-faint">PDFs or screenshots · your LinkedIn export ZIP works here too</p>
+                  <p className="mt-1 text-[13px] text-faint">PDFs or screenshots · add your LinkedIn profile link separately</p>
                 </>
               )}
-              <input ref={input} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.zip" className="hidden" onChange={(e) => addFiles(e.target.files)} />
+              <input ref={input} type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.txt" className="hidden" onChange={(e) => addFiles(e.target.files)} />
             </div>
 
             {files.length > 0 && (
@@ -944,32 +940,30 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
 
             <p className="mb-2.5 mt-6 text-[13px] font-semibold text-muted">Connect more for a sharper plan</p>
             <div className="grid gap-2.5 sm:grid-cols-2">
-              <div className={`card p-4 ${linkedin ? "!border-good/50" : ""}`}>
+              <div className={`card p-4 ${linkedinProfileUrl ? "!border-good/50" : ""}`}>
                 <div className="flex items-center gap-3">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky text-[#0a66c2]"><LinkedinLogo size={22} weight="fill" /></span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[14.5px] font-semibold">LinkedIn export</p>
-                    <p className="truncate text-[12.5px] text-muted">{linkedin ? `${linkedin.connectionsTotal} connections · ${linkedin.network.length} companies` : "Your network, history and skills"}</p>
+                    <p className="text-[14.5px] font-semibold">LinkedIn profile</p>
+                    <p className="truncate text-[12.5px] text-muted">{linkedinProfileUrl ? "Link will appear on your profile" : "Add your public profile link"}</p>
                   </div>
-                  {linkedin ? <CheckCircle size={22} weight="fill" className="shrink-0 text-good" /> : (
-                    <button className="btn btn-secondary btn-sm shrink-0" onClick={() => liInput.current?.click()} disabled={liBusy}>
-                      {liBusy ? <CircleNotch size={14} className="spin" /> : <FileZip size={15} />} ZIP
-                    </button>
-                  )}
-                  <input ref={liInput} type="file" accept=".zip" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { const li = await importLinkedIn(f); runScan({ li }); } }} />
+                  {linkedinProfileUrl && <CheckCircle size={22} weight="fill" className="shrink-0 text-good" />}
                 </div>
-                {linkedin ? (
-                  <p className="mt-2 text-[12px] text-faint">Read on your device. Connection names never leave it.</p>
-                ) : (
-                  <details className="mt-2 text-[12.5px] text-muted">
-                    <summary className="cursor-pointer font-medium text-cardinal">How do I get it?</summary>
-                    <ol className="mt-1.5 list-decimal space-y-0.5 pl-4">
-                      <li>LinkedIn → Me → Settings &amp; Privacy → Data privacy</li>
-                      <li>Get a copy of your data → pick Connections, Profile, Positions, Education, Skills</li>
-                      <li>Request archive. The ZIP arrives by email in ~10 minutes</li>
-                    </ol>
-                  </details>
-                )}
+                <label className="mt-3 block">
+                  <span className="sr-only">LinkedIn profile link</span>
+                  <input
+                    type="url"
+                    aria-label="LinkedIn profile link"
+                    aria-invalid={invalidLinkedinUrl}
+                    className="field w-full"
+                    placeholder="https://www.linkedin.com/in/your-name"
+                    value={linkedinUrl}
+                    onChange={(e) => { setLinkedinUrl(e.target.value); setError(""); }}
+                    onKeyDown={onEnter(continueFromDocs)}
+                  />
+                </label>
+                {invalidLinkedinUrl && <p className="mt-1 text-[12px] text-cardinal">Enter a LinkedIn profile link like linkedin.com/in/your-name.</p>}
+                <p className="mt-2 text-[12px] leading-relaxed text-faint">Saved to your profile. LinkedIn doesn&apos;t share profile details from a link alone.</p>
               </div>
 
               <div className={`card p-4 ${github.trim() && scan.state === "done" ? "!border-good/50" : ""}`}>
@@ -1009,10 +1003,10 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
             {error && <div className="mt-4"><ErrorNote>{error}</ErrorNote></div>}
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <button className="btn btn-primary h-12 px-6" onClick={continueFromDocs}>
-                {files.length || github.trim() || website.trim() || linkedin ? "Continue" : "Skip for now"} <ArrowRight size={16} weight="bold" />
+                {files.length || github.trim() || website.trim() || linkedinUrl.trim() ? "Continue" : "Skip for now"} <ArrowRight size={16} weight="bold" />
               </button>
               <span className="text-[13px] text-faint">
-                {[files.length > 0, !!linkedin, !!github.trim(), !!website.trim(), cal.status === "connected" || cal.status === "demo"].filter(Boolean).length} of 5 sources added
+                {[files.length > 0, !!linkedinProfileUrl, !!github.trim(), !!website.trim(), cal.status === "connected" || cal.status === "demo"].filter(Boolean).length} of 5 sources added
               </span>
             </div>
           </Question>
@@ -1163,7 +1157,7 @@ export default function Onboarding({ onDone, onCancel }: { onDone: () => void; o
                     <div className="flex flex-wrap gap-1.5">
                       <Chip tone="sky">{scan.result.profile.courses.length} courses</Chip>
                       <Chip tone="green">{buildProfile().skills.length} skills</Chip>
-                      {linkedin && <Chip tone="lilac">{linkedin.connectionsTotal} connections</Chip>}
+                      {linkedinProfileUrl && <Chip tone="lilac">LinkedIn profile added</Chip>}
                       <Chip tone="warn">{scan.result.profile.projects.length} projects</Chip>
                       <Chip tone="lilac">{scan.result.profile.experience.length} roles</Chip>
                       {scan.result.profile.gpa ? <Chip tone="gold">GPA {scan.result.profile.gpa.toFixed(2)}</Chip> : null}

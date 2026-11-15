@@ -34,8 +34,8 @@ export function completeness(p: Profile, calendarConnected: boolean): { overall:
     {
       key: "network",
       label: "Network",
-      pct: score([has(p.network), p.clubs.length > 0, (p.connectionsTotal ?? 0) >= 50]),
-      hint: "Import your LinkedIn data export",
+      pct: score([has(p.linkedinUrl), has(p.network), p.clubs.length > 0, (p.connectionsTotal ?? 0) >= 50]),
+      hint: "Add your LinkedIn profile link",
     },
     {
       key: "direction",

@@ -61,10 +61,30 @@ test("demo onboarding, navigation, advice, and persistent progress", { timeout: 
     await page.screenshot({ path: `${output}/major-dropdown-mobile.jpg` });
     await majorInput.press("Escape");
     await page.setViewportSize({ width: 1440, height: 1000 });
+    for (let i = 0; i < 3; i++) {
+      await page.getByRole("button", { name: "Back", exact: true }).click();
+    }
+    const linkedinInput = page.getByRole("textbox", { name: "LinkedIn profile link" });
+    await linkedinInput.waitFor();
+    await linkedinInput.fill("https://example.com/in/alex-chen");
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByText("Enter a LinkedIn profile link like linkedin.com/in/your-name.", { exact: true }).waitFor();
+    await linkedinInput.fill("linkedin.com/in/alex-chen");
+    await page.screenshot({ path: `${output}/linkedin-profile-input.jpg` });
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByRole("button", { name: /This semester/ }).click();
+    await page.getByRole("button", { name: "Continue", exact: true }).click();
+    await page.getByRole("button", { name: "Start my arc" }).waitFor();
     await start.click();
     const nav = page.getByRole("navigation", { name: "Main", exact: true }).filter({ visible: true });
     await nav.getByRole("button", { name: "Quest map", exact: true }).waitFor();
     await page.waitForFunction(() => JSON.parse(localStorage.getItem("trojan-arc:v1") ?? "{}").quests?.length > 0);
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem("trojan-arc:v1") ?? "{}").profile?.linkedinUrl === "https://www.linkedin.com/in/alex-chen");
+    await nav.getByRole("button", { name: "Character", exact: true }).click();
+    const profileLink = page.getByRole("link", { name: "View LinkedIn profile" });
+    await profileLink.waitFor();
+    assert.equal(await profileLink.getAttribute("href"), "https://www.linkedin.com/in/alex-chen");
+    await page.screenshot({ path: `${output}/linkedin-profile-card.jpg`, fullPage: true });
     await page.screenshot({ path: `${output}/quest-map.jpg`, fullPage: true });
     for (const tab of ["Today", "Quest map", "Week", "Radar", "Network", "Character"]) {
       await nav.getByRole("button", { name: tab, exact: true }).click();
