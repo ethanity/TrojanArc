@@ -1,0 +1,1 @@
+- [Incremental profile rescans](incremental-profile-rescans.md) — Rescans analyze only newly supplied sources and preserve student-entered goals, answers, and progress.

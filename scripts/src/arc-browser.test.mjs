@@ -84,6 +84,54 @@ test("demo onboarding, navigation, advice, and persistent progress", { timeout: 
     const profileLink = page.getByRole("link", { name: "View LinkedIn profile" });
     await profileLink.waitFor();
     assert.equal(await profileLink.getAttribute("href"), "https://www.linkedin.com/in/alex-chen");
+    const beforeRescan = await page.evaluate(() => JSON.parse(localStorage.getItem("trojan-arc:v1")));
+    let submittedBody = "";
+    await page.route("**/api/onboard", async (route) => {
+      submittedBody = route.request().postData() ?? "";
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          mode: "live",
+          profile: {
+            name: "", major: "", minor: "", school: "", year: "Junior", gradTerm: "May 2028", gpa: 3.9,
+            goal: "", goalTags: [], timeline: "", preferences: "",
+            courses: [{ code: "CSCI 102", title: "Data Structures", grade: "A", term: "Fall 2026" }],
+            skills: ["Rust"], projects: [], experience: [], clubs: [], github: "",
+            interests: [], awards: [], certifications: [], languages: [], links: [],
+            remainingRequirements: [], unitsCompleted: null,
+          },
+          found: ["Updated transcript"],
+          missing: [],
+        }),
+      });
+    });
+    await page.getByRole("button", { name: "Re-scan my documents" }).click();
+    const rescanDialog = page.getByRole("dialog", { name: "Scan new documents or links" });
+    await rescanDialog.waitFor();
+    await rescanDialog.locator('input[type="file"]').setInputFiles({
+      name: "updated-transcript.pdf", mimeType: "application/pdf", buffer: Buffer.from("test PDF content"),
+    });
+    await rescanDialog.getByRole("textbox", { name: "LinkedIn profile link" }).fill("linkedin.com/in/alex-chen-updated");
+    await rescanDialog.getByRole("button", { name: "Scan and update" }).click();
+    await rescanDialog.getByText("Character updated", { exact: true }).waitFor();
+    assert.match(submittedBody, /updated-transcript\.pdf/, "The rescan submits the newly selected document");
+    assert.doesNotMatch(submittedBody, /Alex Chen|Summer 2027/, "The rescan does not resubmit or rebuild onboarding answers");
+    await page.waitForFunction(() => {
+      const profile = JSON.parse(localStorage.getItem("trojan-arc:v1") ?? "{}").profile;
+      return profile?.gpa === 3.9 && profile?.skills?.includes("Rust");
+    });
+    const afterRescan = await page.evaluate(() => JSON.parse(localStorage.getItem("trojan-arc:v1")));
+    assert.equal(afterRescan.profile.name, beforeRescan.profile.name);
+    assert.equal(afterRescan.profile.major, beforeRescan.profile.major);
+    assert.equal(afterRescan.profile.goal, beforeRescan.profile.goal);
+    assert.deepEqual(afterRescan.profile.answers, beforeRescan.profile.answers);
+    assert.deepEqual(afterRescan.quests, beforeRescan.quests, "Existing quest progress is preserved");
+    assert.equal(afterRescan.xp, beforeRescan.xp, "Existing XP is preserved");
+    assert.ok(afterRescan.profile.courses.some((course) => course.code === "CSCI 102"));
+    await rescanDialog.getByRole("button", { name: "Back to My Character" }).click();
+    await page.getByRole("link", { name: "View LinkedIn profile" }).waitFor();
+    assert.equal(await page.getByRole("link", { name: "View LinkedIn profile" }).getAttribute("href"), "https://www.linkedin.com/in/alex-chen-updated");
     await page.screenshot({ path: `${output}/linkedin-profile-card.jpg`, fullPage: true });
     await page.screenshot({ path: `${output}/quest-map.jpg`, fullPage: true });
     for (const tab of ["Today", "Quest map", "Week", "Radar", "Network", "Character"]) {

@@ -56,7 +56,6 @@ export default function Home() {
     setTab("today");
   };
   const [tab, setTab] = useState<string>("today");
-  const [onboarding, setOnboarding] = useState(false);
   const [live, setLive] = useState<boolean | null>(null);
   const [levelUp, setLevelUp] = useState<{ from: number; to: number } | null>(null);
 
@@ -136,11 +135,11 @@ export default function Home() {
     </>
   );
 
-  if (!profile || onboarding) {
+  if (!profile) {
     return (
       <main className="relative z-10">
         {overlays}
-        <Onboarding onDone={() => { setOnboarding(false); go("quests"); }} onCancel={profile ? () => setOnboarding(false) : undefined} />
+        <Onboarding onDone={() => go("quests")} />
       </main>
     );
   }
@@ -223,7 +222,7 @@ export default function Home() {
         {tab === "week" && <Week />}
         {tab === "radar" && <Radar />}
         {tab === "network" && <Network />}
-        {tab === "character" && <Character onRescan={() => setOnboarding(true)} />}
+        {tab === "character" && <Character />}
       </main>
 
       {/* Mobile tab bar */}

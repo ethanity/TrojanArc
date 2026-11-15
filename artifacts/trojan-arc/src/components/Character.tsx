@@ -9,11 +9,13 @@ import { computeStats, levelFromXp, rankFor } from "@/lib/game";
 import { Avatar, Bar, Card, Chip, SectionTitle } from "./ui";
 import { RankBadge, StatRadar } from "./viz";
 import { RankLadder } from "./viz2";
+import RescanDocuments from "./RescanDocuments";
 
-export default function Character({ onRescan }: { onRescan: () => void }) {
+export default function Character() {
   const { profile, reset, wins, xp, quests, storiesShared } = useStore();
   const cal = useCalendar();
   const [confirming, setConfirming] = useState(false);
+  const [rescanOpen, setRescanOpen] = useState(false);
   if (!profile) return null;
   const lv = levelFromXp(xp);
   const stats = computeStats(profile, quests, storiesShared);
@@ -180,7 +182,7 @@ export default function Character({ onRescan }: { onRescan: () => void }) {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <button className="btn btn-secondary" onClick={onRescan}><ArrowsClockwise size={16} /> Re-scan my documents</button>
+        <button className="btn btn-secondary" onClick={() => setRescanOpen(true)}><ArrowsClockwise size={16} /> Re-scan my documents</button>
         {!confirming ? (
           <button className="btn btn-secondary" onClick={() => setConfirming(true)}><SignOut size={16} /> Sign out</button>
         ) : (
@@ -191,6 +193,7 @@ export default function Character({ onRescan }: { onRescan: () => void }) {
           </span>
         )}
       </div>
+      {rescanOpen && <RescanDocuments onClose={() => setRescanOpen(false)} />}
     </div>
   );
 }
