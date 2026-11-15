@@ -20,7 +20,7 @@ router.get("/status", async (_req, res) => {
 // are used only for this request, just as in the imported app.
 router.post(
   "/:action",
-  raw({ type: "multipart/form-data", limit: "50mb" }),
+  raw({ type: "multipart/form-data", limit: "10mb" }),
   async (req, res, next) => {
     const handler = handlers[String(req.params.action)];
     if (!handler) return next();
