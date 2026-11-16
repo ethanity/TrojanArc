@@ -2,6 +2,10 @@
 
 **Your college arc, planned by Trojans who've been there.** A personal college-success and network hub for USC students, built for HackSC.
 
+🏆 **3rd Place, AI@USC Hackathon by HackSC 2026** (90+ teams) · **Try it live:** [trojan-arc.vercel.app](https://trojan-arc.vercel.app)
+
+Built by Ethan Don, Brandon Bui, Ashwath Saravanan and Venky Shivampet.
+
 ## The problem
 
 1. **"What do I even need?"** Students don't know which skills, experiences or classes their goal actually requires.
